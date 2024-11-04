@@ -1,0 +1,67 @@
+# Enable Rewrite Engine
+RewriteEngine On
+
+# 1. Block .txt access
+RewriteRule \.txt$ - [F,L]
+
+# 2. Serve PHP files directly if requested
+RewriteCond %{REQUEST_URI} \.php$ [NC]
+RewriteRule ^ - [L]
+
+# 3. Route specific pages to their .html files
+RewriteRule ^about$ /about.html [L]
+RewriteRule ^upcoming-projects$ /upcoming-projects.html [L]
+RewriteRule ^past-projects$ /past-projects.html [L]
+RewriteRule ^edit-projects$ /edit-projects.html [L]
+RewriteRule ^admin-management$ /admin-management.html [L]
+
+# 4. Serve Next.js static assets (CSS, JS, etc.) from the _next folder
+RewriteCond %{REQUEST_URI} ^/_next/.*$ [NC]
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -f
+RewriteRule ^ - [L]
+
+# 5. Serve static assets (like images) if they exist
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# 6. Allow access to setup-account.php only if a token parameter is present
+RewriteCond %{REQUEST_URI} ^/setup-account\.php$ [NC]
+RewriteCond %{QUERY_STRING} !(^|&)token=[a-f0-9]{32}($|&) [NC]
+RewriteRule ^setup-account\.php$ - [F,L] # Forbid access if token is missing or invalid format
+
+# 7. Route /register with token to /register.html
+RewriteRule ^register$ /register.html [QSA,L]
+
+# 8. Handle API requests (PHP files)
+RewriteRule ^api/(.*)$ /api/$1 [L,QSA]
+RewriteRule ^admin-management.php$ /admin-management.php [L,QSA]
+
+# 9. Handle edit.html with query parameters
+RewriteCond %{REQUEST_URI} ^/edit\.html$ [NC]
+RewriteRule ^ - [L]
+
+# 10. Fallback for all other routes (Next.js behavior)
+RewriteCond %{REQUEST_URI} !\.(php|html|css|js|jpg|png|gif|svg|ico|json)$ [NC]
+RewriteRule ^.*$ /index.html [L]
+
+# 11. Handle CORS (Cross-Origin Resource Sharing)
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
+    Header always set Access-Control-Allow-Credentials "true"
+</IfModule>
+
+# 12. Handle OPTIONS requests (CORS preflight)
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# 13. Prevent access to sensitive files
+<FilesMatch "\.(env|config|log|ini|sh|sql|bak|dist)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# 14. Disable directory indexing
+Options -Indexes
